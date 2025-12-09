@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../static/css/student.css" />
+  </head>
+<body>
+    <!-- Header -->
+    <header
+      class="w-full h-[10vh] min-h-[60px] flex items-center bg-blue-600 px-4 sm:px-6 md:px-8 fixed top-0 left-0 z-50 shadow-md"
+    >
+      <p class="text-white text-sm sm:text-base md:text-lg font-medium">
+        Python (19877) 8:00-10:30 MW - Edit Student
+      </p>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="content-wrapper">
+      <!-- Webcam Container -->
+      <div
+        class="w-full max-w-xs sm:max-w-sm md:max-w-md bg-white flex flex-col border-2 border-gray-300 rounded-lg shadow-lg p-3 sm:p-4 md:p-6 gap-2 sm:gap-2.5 md:gap-3"
+      >
+        <div
+          class="w-full aspect-3/4 bg-gray-900 rounded-lg overflow-hidden relative"
+        >
+          <video id="webcam" autoplay playsinline class="hidden w-full h-full object-cover"></video>
+          <div
+            id="webcam-placeholder"
+            class="absolute inset-0 flex items-center justify-center text-white text-sm"
+          >
+            <p>Click "Start Camera" to begin</p>
+          </div>
+        </div>
+
+        <!-- Webcam Buttons -->
+        <div class="w-full flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            id="cancelWebcam"
+            class="flex-1 h-9 sm:h-10 text-sm text-white rounded-md bg-gray-500 hover:bg-gray-600 transition duration-300 font-medium shadow-md hover:shadow-lg"
+          >
+            CANCEL
+          </button>
+
+          <button
+            type="button"
+            id="captureWebcam"
+            class="flex-1 h-9 sm:h-10 text-sm text-white rounded-md bg-blue-600 hover:bg-blue-700 transition duration-300 font-medium shadow-md hover:shadow-lg"
+          >
+            START CAMERA
+          </button>
+        </div>
+      </div>
+
+      <!-- Form Container -->
+      <form
+        id="studentForm"
+        method="POST"
+        action="{% if is_edit %}
+                  {{ url_for('update_student', idno=student.idno) }}
+                {% else %}
+                  {{ url_for('add_student') }}
+                {% endif %}"
+        enctype="multipart/form-data"
+        class="w-full max-w-xs sm:max-w-sm md:max-w-md bg-white flex flex-col items-center border-2 border-gray-300 rounded-lg shadow-lg p-3 sm:p-4 md:p-6 gap-2 sm:gap-2.5 md:gap-3"
+      >
+        <!-- User Icon with Upload -->
+        <div class="file-input-wrapper">
+          <label for="imageUpload" class="cursor-pointer">
+              {% if student and student['image'] %}
+              <img
+                src="{{ url_for('static', filename='uploads/' + student['image']) }}"
+                alt="student-photo"
+                class="w-32 h-32 rounded-full object-cover border-4 border-gray-300"
+              />
+              {% else %}
+              <img
+                src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+                alt="user-icon"
+                class="w-16 h-16"
+              />
+              {% endif %}
+          </label>
+          <input type="file" id="imageUpload" name="image" accept="image/*" />
+        </div>
+
+        <p class="text-xs text-gray-500 -mt-1">Click image to upload photo</p>
+
+        <!-- ID Number (readonly) -->
+        <input
+          type="text"
+          id="idNumber"
+          name="idno"
+          value="{{ student.idno if student else '' }}"
+          placeholder="ID Number"
+          class="border border-gray-300 p-1.5 sm:p-2 rounded-md w-full text-sm bg-gray-100 cursor-not-allowed"
+          {% if is_edit %}readonly{% endif %}
+        />
+
+        <!-- Last Name -->
+        <input
+          type="text"
+          id="lastName"
+          name="lastname"
+          value="{{ student.lastname if student else '' }}"
+          placeholder="Last Name"
+          class="border border-gray-300 p-1.5 sm:p-2 rounded-md w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          required
+        />
+
+        <!-- First Name -->
+        <input
+          type="text"
+          id="firstName"
+          name="firstname"
+          value="{{ student.firstname if student else '' }}"
+          placeholder="First Name"
+          class="border border-gray-300 p-1.5 sm:p-2 rounded-md w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+          required
+        />
+
+        <!-- Course Select -->
+        <select
+          id="course"
+          name="course"
+          class="border border-gray-300 p-1.5 sm:p-2 rounded-md w-full text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none bg-white"
+          required
+        >
+          <option value="BSIT" {% if student and student.course == 'BSIT' %}selected{% endif %}>BSIT</option>
+          <option value="BSCS" {% if student and student.course == 'BSCS' %}selected{% endif %}>BSCS</option>
+          <option value="BSBA" {% if student and student.course == 'BSBA' %}selected{% endif %}>BSBA</option>
+          <option value="BSTM" {% if student and student.course == 'BSTM' %}selected{% endif %}>BSTM</option>
+          <option value="BSCRIM" {% if student and student.course == 'BSCRIM' %}selected{% endif %}>BSCRIM</option>
+        </select>
+
+        <!-- Level Select -->
+        <select
+          name="level"
+          id="level"
+          class="border border-gray-300 p-1.5 sm:p-2 rounded-md w-full text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none bg-white"
+          required
+        >
+          <option value="1" {% if student and student.level|string == '1' %}selected{% endif %}>First Year</option>
+          <option value="2" {% if student and student.level|string == '2' %}selected{% endif %}>Second Year</option>
+          <option value="3" {% if student and student.level|string == '3' %}selected{% endif %}>Third Year</option>
+          <option value="4" {% if student and student.level|string == '4' %}selected{% endif %}>Fourth Year</option>
+        </select>
+
+        <!-- Buttons -->
+        <div class="w-full flex flex-col sm:flex-row gap-2 mt-2">
+          <a
+            href="{{ url_for('dashboard') }}"
+            class="flex-1 h-9 sm:h-10 text-sm text-center leading-9 sm:leading-10 text-white rounded-md bg-gray-500 hover:bg-gray-600 transition duration-300 font-medium shadow-md hover:shadow-lg"
+          >
+            CANCEL
+          </a>
+
+          <button
+            type="submit"
+            class="flex-1 h-9 sm:h-10 text-sm text-white rounded-md bg-blue-600 hover:bg-blue-700 transition duration-300 font-medium shadow-md hover:shadow-lg"
+          >
+            {{ 'UPDATE' if is_edit else 'ADD STUDENT' }}
+          </button>
+        </div>
+      </form>
+
+      <!-- QR Code Container -->
+      <div
+        class="w-full max-w-xs sm:max-w-sm md:max-w-md bg-white flex flex-col items-center border-2 border-gray-300 rounded-lg shadow-lg p-3 sm:p-4 md:p-6 gap-2 sm:gap-2.5 md:gap-3"
+      >
+        <p class="text-base sm:text-lg font-semibold text-gray-800">
+          Student QR Code
+        </p>
+        <div id="qrcode" class="bg-white p-4 rounded-lg"></div>
+        <p class="text-xs text-gray-500 text-center">
+          Scan this QR code for student identification
+        </p>
+        <button
+          type="button"
+          id="downloadQR"
+          class="w-full h-9 sm:h-10 text-sm text-white rounded-md bg-green-600 hover:bg-green-700 transition duration-300 font-medium shadow-md hover:shadow-lg"
+        >
+          DOWNLOAD QR CODE
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer
+      class="w-full h-[10vh] min-h-[60px] flex justify-center items-center border-t-2 border-t-gray-200 fixed bottom-0 left-0 bg-white z-50"
+    >
+      <p class="text-xs sm:text-sm md:text-base text-center">
+        CopyRight &copy; DUPA & GUINITA
+      </p>
+    </footer>
+
+    <!-- Load QRCode.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+      let stream = null;
+      let isCameraActive = false;
+
+      const webcam = document.getElementById("webcam");
+      const webcamPlaceholder = document.getElementById("webcam-placeholder");
+      const captureBtn = document.getElementById("captureWebcam");
+      const cancelBtn = document.getElementById("cancelWebcam");
+      const previewImage = document.getElementById("previewImage");
+      const downloadBtn = document.getElementById("downloadQR");
+
+      // Generate QR Code with student data
+      var studentInfo = {
+        idNumber: "{{ student.idno }}",
+        firstName: "{{ student.firstname }}",
+        lastName: "{{ student.lastname }}",
+        course: "{{ student.course }}",
+        level: "{{ student.level }}"
+      };
+      
+      var qrData = JSON.stringify(studentInfo);
+      new QRCode(document.getElementById("qrcode"), {
+        text: qrData,
+        width: 200,
+        height: 200,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H,
+      });
+
+      // Download QR Code
+      downloadBtn.addEventListener("click", function () {
+        var canvas = document.querySelector("#qrcode canvas");
+        if (canvas) {
+          var link = document.createElement("a");
+          link.download = "qrcode-{{ student.idno }}-" + Date.now() + ".png";
+          link.href = canvas.toDataURL();
+          link.click();
+        } else {
+          alert("No QR code to download!");
+        }
+      });
+
+      // Start/Capture Camera
+      captureBtn.addEventListener("click", async function () {
+        if (!isCameraActive) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: "user",
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+              },
+            });
+            webcam.srcObject = stream;
+            webcam.classList.remove("hidden");
+            webcamPlaceholder.style.display = "none";
+            isCameraActive = true;
+            captureBtn.textContent = "CAPTURE";
+            captureBtn.classList.remove("bg-blue-600", "hover:bg-blue-700");
+            captureBtn.classList.add("bg-green-600", "hover:bg-green-700");
+          } catch (err) {
+            alert("Unable to access camera: " + err.message);
+          }
+        } else {
+          var canvas = document.createElement("canvas");
+          canvas.width = webcam.videoWidth;
+          canvas.height = webcam.videoHeight;
+          canvas.getContext("2d").drawImage(webcam, 0, 0);
+          previewImage.src = canvas.toDataURL("image/png");
+          
+          canvas.toBlob(function(blob) {
+            var file = new File([blob], "webcam-capture.png", { type: "image/png" });
+            var dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            document.getElementById("imageUpload").files = dataTransfer.files;
+          });
+          
+          stopCamera();
+        }
+      });
+
+      cancelBtn.addEventListener("click", function () {
+        stopCamera();
+      });
+
+      function stopCamera() {
+        if (stream) {
+          stream.getTracks().forEach(function(track) {
+            track.stop();
+          });
+          webcam.srcObject = null;
+          webcam.classList.add("hidden");
+          webcamPlaceholder.style.display = "flex";
+          isCameraActive = false;
+          captureBtn.textContent = "START CAMERA";
+          captureBtn.classList.remove("bg-green-600", "hover:bg-green-700");
+          captureBtn.classList.add("bg-blue-600", "hover:bg-blue-700");
+        }
+      }
+
+      document.getElementById("imageUpload").addEventListener("change", function (e) {
+        var file = e.target.files[0];
+        if (file) {
+          var reader = new FileReader();
+          reader.onload = function (event) {
+            previewImage.src = event.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    </script>
+  </body>
+</html>

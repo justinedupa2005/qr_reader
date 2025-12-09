@@ -1,0 +1,118 @@
+{% extends 'base.html' %} {% block content %} {% with messages =
+get_flashed_messages(with_categories=true) %} {% if messages %}
+<div class="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+  {% for category, message in messages %}
+  <div
+    class="bg-red-600 text-white px-6 py-3 rounded-md shadow-lg text-sm sm:text-base"
+  >
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %} {% endwith %}
+
+<!-- Main container -->
+<div class="w-full min-h-screen flex flex-col">
+  <!-- Header -->
+  <header
+    class="w-full h-[10vh] min-h-[60px] flex items-center bg-blue-600 px-4"
+  >
+    <p class="text-white text-sm sm:text-base md:text-lg">
+      Python (19877) 8:00-10:30 MW
+    </p>
+  </header>
+
+  <!-- Sign in page -->
+  <div
+    class="w-full flex-1 flex flex-col justify-center items-center py-8 px-4"
+  >
+    <div
+      class="w-[95%] sm:w-[80%] md:w-[60%] lg:w-[50%] xl:w-[40%] max-w-[500px] flex flex-col justify-start items-center border-2 border-gray-400 rounded-lg p-4 sm:p-6 md:p-8 gap-6 sm:gap-8 md:gap-14"
+    >
+      <!-- User icon -->
+      <div class="w-full flex justify-center">
+        <img
+          src="../static/images/user-icon.png"
+          alt="user"
+          class="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24"
+        />
+      </div>
+
+      <!-- Form -->
+      <form
+        action="{{ url_for('login') }}"
+        method="POST"
+        class="w-full flex flex-col gap-3 sm:gap-4"
+      >
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          required
+          class="p-2 sm:p-2.5 md:p-3 border rounded text-sm sm:text-base"
+        />
+
+        <div class="relative w-full">
+          <input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="Password"
+            required
+            class="p-2 sm:p-2.5 md:p-3 border rounded w-full text-sm sm:text-base"
+          />
+
+          <!-- Eye icon positioned absolutely inside the input -->
+          <span
+            id="togglePassword"
+            class="absolute right-3 top-1/2 -translate-y-1/2 mt-3 cursor-pointer text-gray-600"
+          >
+            &#128065;
+          </span>
+        </div>
+
+        <!-- Button and link container -->
+        <div class="w-full flex flex-col sm:flex-row gap-3 sm:gap-2 mt-2">
+          <!-- Register link -->
+          <a
+            href="{{ url_for('signup') }}"
+            class="flex-1 flex items-center justify-center sm:justify-start text-blue-600 underline text-sm sm:text-base order-2 sm:order-1"
+            >REGISTER</a
+          >
+
+          <!-- Login button -->
+          <button
+            type="submit"
+            class="flex-1 bg-blue-600 text-white p-2 sm:p-2.5 md:p-3 rounded text-sm sm:text-base order-1 sm:order-2"
+          >
+            Login
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer
+    class="w-full h-[10vh] min-h-[60px] flex justify-center items-center border-t-2 border-t-gray-200 px-4"
+  >
+    <p class="text-xs sm:text-sm md:text-base text-center">
+      CopyRight &copy; DUPA & GUINITA
+    </p>
+  </footer>
+</div>
+
+<script>
+  var passwordInput = document.getElementById("password");
+  var eyeIcon = document.getElementById("togglePassword");
+
+  // When eye is clicked
+  eyeIcon.onclick = function () {
+    if (passwordInput.type === "password") {
+      passwordInput.type = "text";
+    } else {
+      passwordInput.type = "password";
+    }
+  };
+</script>
+{% endblock %}

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../static/css/style.css" />
+    <link rel="stylesheet" href="../static/css/qr_reader.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header
+      class="w-full h-[10vh] min-h-[60px] flex justify-center items-center bg-blue-600 px-4 fixed top-0 left-0 z-50"
+    >
+      <div class="flex-1">
+        <p class="text-white text-sm sm:text-base md:text-lg">
+          Python (19877) 8:00-10:30 MW
+        </p>
+      </div>
+
+      <div class="flex-1 flex justify-end">
+        <a
+          href="{{ url_for('signin') }}"
+          class="text-white text-sm sm:text-base md:text-lg hover:underline"
+          >Login</a
+        >
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="content-wrapper">
+      <div
+        class="w-full max-w-md bg-white flex flex-col items-center border-2 border-gray-300 rounded-lg shadow-lg p-4 sm:p-6 gap-4"
+      >
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-800">
+          Scan QR Code
+        </h2>
+
+        <!-- QR Reader Container -->
+        <div id="reader" class="w-full"></div>
+
+        <!-- Control Buttons -->
+        <div class="w-full flex flex-col sm:flex-row gap-2">
+          <button
+            id="startBtn"
+            class="flex-1 h-10 sm:h-11 text-sm sm:text-base text-white rounded-md bg-blue-600 hover:bg-blue-700 transition duration-300 font-medium shadow-md hover:shadow-lg"
+          >
+            START SCANNING
+          </button>
+
+          <button
+            id="stopBtn"
+            class="flex-1 h-10 sm:h-11 text-sm sm:text-base text-white rounded-md bg-red-600 hover:bg-red-700 transition duration-300 font-medium shadow-md hover:shadow-lg"
+            disabled
+          >
+            STOP SCANNING
+          </button>
+        </div>
+
+        <!-- Result Display -->
+        <div
+          id="result"
+          class="w-full p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-[100px] hidden"
+        >
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">
+            Scanned Result:
+          </h3>
+          <div id="resultData" class="text-sm text-gray-900 break-all"></div>
+        </div>
+
+        <!-- Student Info Display -->
+        <div
+          id="studentInfo"
+          class="w-full p-4 bg-blue-50 rounded-lg border border-blue-200 hidden"
+        >
+          <h3 class="text-base font-bold text-blue-800 mb-3">
+            Student Information
+          </h3>
+          <div class="space-y-2 text-sm">
+            <p>
+              <span class="font-semibold">Unique ID:</span>
+              <span id="uniqueID"></span>
+            </p>
+            <p>
+              <span class="font-semibold">ID Number:</span>
+              <span id="idNumber"></span>
+            </p>
+            <p>
+              <span class="font-semibold">Name:</span>
+              <span id="studentName"></span>
+            </p>
+            <p>
+              <span class="font-semibold">Course:</span>
+              <span id="course"></span>
+            </p>
+            <p>
+              <span class="font-semibold">Level:</span> <span id="level"></span>
+            </p>
+            <p>
+              <span class="font-semibold">Timestamp:</span>
+              <span id="timestamp"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer
+      class="w-full h-[10vh] min-h-[60px] flex justify-center items-center border-t-2 border-t-gray-200 fixed bottom-0 left-0 bg-white"
+    >
+      <p class="text-xs sm:text-sm md:text-base text-center">
+        CopyRight &copy; DUPA & GUINITA
+      </p>
+    </footer>
+
+    <script>
+      let html5QrCode = null;
+      let isScanning = false;
+
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const resultDiv = document.getElementById("result");
+      const resultData = document.getElementById("resultData");
+      const studentInfo = document.getElementById("studentInfo");
+
+      // Function to parse and display student data
+      function displayStudentData(decodedText) {
+        try {
+          const studentData = JSON.parse(decodedText);
+
+          // Display raw result
+          resultDiv.classList.remove("hidden");
+          resultData.textContent = decodedText;
+
+          // Display parsed student info
+          if (studentData.uniqueID && studentData.idNumber) {
+            studentInfo.classList.remove("hidden");
+            document.getElementById("uniqueID").textContent =
+              studentData.uniqueID || "N/A";
+            document.getElementById("idNumber").textContent =
+              studentData.idNumber || "N/A";
+            document.getElementById("studentName").textContent =
+              `${studentData.firstName || ""} ${
+                studentData.lastName || ""
+              }`.trim() || "N/A";
+            document.getElementById("course").textContent =
+              studentData.course || "N/A";
+            document.getElementById("level").textContent =
+              studentData.level || "N/A";
+
+            if (studentData.timestamp) {
+              const date = new Date(studentData.timestamp);
+              document.getElementById("timestamp").textContent =
+                date.toLocaleString();
+            } else {
+              document.getElementById("timestamp").textContent = "N/A";
+            }
+          } else {
+            studentInfo.classList.add("hidden");
+          }
+        } catch (error) {
+          // Not JSON, just display raw text
+          resultDiv.classList.remove("hidden");
+          resultData.textContent = decodedText;
+          studentInfo.classList.add("hidden");
+        }
+      }
+
+      // Success callback
+      function onScanSuccess(decodedText, decodedResult) {
+        console.log(`QR Code detected: ${decodedText}`);
+        displayStudentData(decodedText);
+
+        // Optional: Stop scanning after successful read
+        // stopScanning();
+      }
+
+      // Error callback (optional)
+      function onScanError(errorMessage) {
+        // Handle scan errors silently
+        // console.warn(`QR Code scan error: ${errorMessage}`);
+      }
+
+      // Start scanning
+      async function startScanning() {
+        try {
+          html5QrCode = new Html5Qrcode("reader");
+
+          await html5QrCode.start(
+            { facingMode: "environment" }, // Use back camera
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+            },
+            onScanSuccess,
+            onScanError
+          );
+
+          isScanning = true;
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+          startBtn.classList.add("bg-gray-400", "cursor-not-allowed");
+          startBtn.classList.remove("bg-blue-600", "hover:bg-blue-700");
+        } catch (err) {
+          alert(`Unable to start scanning: ${err}`);
+        }
+      }
+
+      // Stop scanning
+      async function stopScanning() {
+        if (html5QrCode && isScanning) {
+          try {
+            await html5QrCode.stop();
+            html5QrCode.clear();
+            isScanning = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            startBtn.classList.remove("bg-gray-400", "cursor-not-allowed");
+            startBtn.classList.add("bg-blue-600", "hover:bg-blue-700");
+          } catch (err) {
+            console.error(`Error stopping scanner: ${err}`);
+          }
+        }
+      }
+
+      // Button event listeners
+      startBtn.addEventListener("click", startScanning);
+      stopBtn.addEventListener("click", stopScanning);
+
+      // Stop scanning when page is closed
+      window.addEventListener("beforeunload", () => {
+        if (isScanning) {
+          stopScanning();
+        }
+      });
+    </script>
+  </body>
+</html>
