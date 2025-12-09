@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../static/css/style.css" />
+    <link rel="stylesheet" href="../static/css/attendance.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header
+      class="w-full h-[10vh] min-h-[60px] flex items-center bg-blue-600 px-4 fixed top-0 left-0 z-50"
+    >
+      <p class="text-white text-sm sm:text-base md:text-lg">
+        Python (19877) 8:00-10:30 MW
+      </p>
+    </header>
+
+    <!-- Hamburger Menu - Mobile only -->
+    <div
+      class="w-full h-[10vh] flex items-center fixed top-[10vh] left-0 z-40 px-4 lg:hidden bg-white"
+    >
+      <img
+        src="https://cdn-icons-png.flaticon.com/512/1828/1828859.png"
+        alt="Menu"
+        id="hamburger-icon"
+        class="w-6 h-6 cursor-pointer"
+      />
+    </div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <a href="{{ url_for('admin') }}">User Management</a>
+      <a href="{{ url_for('dashboard') }}">Student Management</a>
+      <a href="#" class="bg-blue-800">Attendance</a>
+      <a href="{{ url_for('signin') }}">Logout</a>
+    </aside>
+
+    <!-- Overlay -->
+    <div id="overlay"></div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %}
+    <div
+      class="fixed top-[11vh] left-1/2 transform -translate-x-1/2 z-50 w-11/12 max-w-md"
+    >
+      {% for category, message in messages %}
+      <div
+        class="bg-{% if category == 'error' %}red{% else %}green{% endif %}-500 text-white px-6 py-3 rounded-lg shadow-lg mb-2"
+      >
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %} {% endwith %}
+
+    <!-- Main content -->
+    <div class="main-content">
+      <!-- Page Header -->
+      <div class="mb-4">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-800">
+          Attendance Records
+        </h1>
+        <p class="text-gray-600 text-xs sm:text-sm mt-1">
+          <span id="currentDate"></span>
+        </p>
+      </div>
+
+      <!-- Table Container -->
+      <div class="table-container">
+        <!-- Table Header with Actions -->
+        <div class="table-header">
+          <div class="flex items-center gap-3">
+            <h2 class="text-base sm:text-lg font-semibold text-gray-800">
+              Today's Attendance
+            </h2>
+            <span class="stats-badge">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"
+                />
+              </svg>
+              <span id="totalRecords">0</span>
+            </span>
+          </div>
+
+          <div class="flex gap-2">
+            <a
+              href="{{ url_for('index') }}"
+              class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition duration-300 text-sm shadow-sm"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                />
+              </svg>
+              <span class="hidden sm:inline">Scan QR</span>
+              <span class="sm:hidden">Scan</span>
+            </a>
+            <button
+              id="clearAllBtn"
+              class="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition duration-300 text-sm shadow-sm"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              <span class="hidden sm:inline">Clear All</span>
+              <span class="sm:hidden">Clear</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Wrapper -->
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Student ID</th>
+                <th>Time In</th>
+                <th>Name</th>
+                <th>Course</th>
+                <th>Level</th>
+              </tr>
+            </thead>
+            <tbody id="attendanceTableBody">
+              <!-- Records will be inserted here dynamically -->
+            </tbody>
+          </table>
+
+          <!-- Empty State -->
+          <div id="emptyState" class="empty-state">
+            <svg
+              class="mx-auto h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mb-3"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            <p class="text-base sm:text-lg font-medium text-gray-700">
+              No attendance records yet
+            </p>
+            <p class="text-xs sm:text-sm mt-1 text-gray-500">
+              Start scanning QR codes to record attendance
+            </p>
+            <a
+              href="{{ url_for('index') }}"
+              class="inline-flex items-center gap-2 mt-4 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-medium transition duration-300 text-sm shadow-sm"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                />
+              </svg>
+              Scan QR Code
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Sidebar Toggle
+      const hamburger = document.getElementById("hamburger-icon");
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("overlay");
+
+      hamburger.addEventListener("click", () => {
+        sidebar.classList.toggle("active");
+        overlay.classList.toggle("active");
+      });
+
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("active");
+        overlay.classList.remove("active");
+      });
+
+      // Set current date
+      const currentDateEl = document.getElementById("currentDate");
+      const today = new Date();
+      const options = {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      };
+      currentDateEl.textContent = today.toLocaleDateString("en-US", options);
+
+      // Load and display attendance records
+      // Load and display attendance records
+      function loadAttendanceRecords() {
+        const attendanceList =
+          JSON.parse(localStorage.getItem("attendanceRecords")) || [];
+        const tbody = document.getElementById("attendanceTableBody");
+        const emptyState = document.getElementById("emptyState");
+        const totalRecordsEl = document.getElementById("totalRecords");
+
+        // Get today's date
+        const todayDate = new Date().toLocaleDateString("en-US");
+
+        // Filter records for today only
+        const todayRecords = attendanceList.filter(
+          (record) => record.date === todayDate
+        );
+
+        // Update total count
+        totalRecordsEl.textContent = todayRecords.length;
+
+        // Clear table
+        tbody.innerHTML = "";
+
+        if (todayRecords.length === 0) {
+          emptyState.style.display = "block";
+        } else {
+          emptyState.style.display = "none";
+
+          // Add records to table with student ID from database
+          todayRecords.forEach((record) => {
+            const row = document.createElement("tr");
+            // Use record.id if it exists, otherwise fall back to a default value
+            const studentId = record.id || "N/A";
+            row.innerHTML = `
+        <td class="font-medium text-gray-900">${studentId}</td>
+        <td class="font-medium text-gray-900">${record.idNumber}</td>
+        <td class="text-gray-700">${record.timeIn}</td>
+        <td class="text-gray-900">${record.name}</td>
+        <td class="text-gray-700">${record.course}</td>
+        <td class="text-gray-700">${record.level}</td>
+      `;
+            tbody.appendChild(row);
+          });
+        }
+      }
+
+      // Clear all attendance records
+      document.getElementById("clearAllBtn").addEventListener("click", () => {
+        if (
+          confirm(
+            "Are you sure you want to clear all attendance records? This action cannot be undone."
+          )
+        ) {
+          localStorage.removeItem("attendanceRecords");
+          loadAttendanceRecords();
+          alert("All attendance records have been cleared.");
+        }
+      });
+
+      // Load records on page load
+      loadAttendanceRecords();
+
+      // Refresh records every 5 seconds to show new scans
+      setInterval(loadAttendanceRecords, 5000);
+
+      // Also refresh when page becomes visible (if user switches tabs)
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) {
+          loadAttendanceRecords();
+        }
+      });
+    </script>
+  </body>
+</html>

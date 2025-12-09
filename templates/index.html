@@ -83,7 +83,7 @@
 
         <div class="bg-green-50 p-3 rounded-lg border-2 border-green-500">
           <p class="text-center text-green-700 font-bold text-lg">
-            Scan Successful
+            Attendance Recorded!
           </p>
         </div>
       </div>
@@ -110,7 +110,7 @@
         class="w-full max-w-md bg-white flex flex-col items-center border-2 border-gray-300 rounded-lg shadow-lg p-4 sm:p-6 gap-4"
       >
         <h2 class="text-xl sm:text-2xl font-bold text-gray-800">
-          Scan QR Code
+          Scan QR Code for Attendance
         </h2>
 
         <!-- QR Reader Container -->
@@ -153,7 +153,6 @@
       let isScanning = false;
       let popupTimeout = null;
       let progressInterval = null;
-      let scannedStudents = [];
 
       const startBtn = document.getElementById("startBtn");
       const stopBtn = document.getElementById("stopBtn");
@@ -161,6 +160,84 @@
       const popupOverlay = document.getElementById("popupOverlay");
       const closePopupBtn = document.getElementById("closePopup");
       const progressBar = document.getElementById("progressBar");
+
+      async function saveAttendance(studentData) {
+        // Get current date and time
+        const now = new Date();
+        const timeIn = now.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+        const date = now.toLocaleDateString("en-US");
+
+        // Fetch student list from backend to get the student's ID
+        let studentId = null;
+        try {
+          const response = await fetch("/api/get_students");
+          if (response.ok) {
+            const students = await response.json();
+            // Find the student by their ID number and get their position in the list
+            const studentIndex = students.findIndex(
+              (s) =>
+                s.idno === studentData.idNumber ||
+                s.idNumber === studentData.idNumber
+            );
+            if (studentIndex !== -1) {
+              studentId = studentIndex + 1; // ID is the position (1-based index)
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching student list:", error);
+          alert("Unable to connect to student database. Please try again.");
+          return false;
+        }
+
+        // If we couldn't find the student ID, don't proceed
+        if (studentId === null) {
+          alert("Student not found in database. Please contact administrator.");
+          return false;
+        }
+
+        // Create attendance record with the database ID
+        const attendanceRecord = {
+          id: studentId, // This is the ID from the student management list
+          idNumber: studentData.idNumber,
+          name: `${studentData.firstName} ${studentData.lastName}`.trim(),
+          course: studentData.course,
+          level: studentData.level,
+          timeIn: timeIn,
+          date: date,
+          timestamp: now.getTime(),
+        };
+
+        // Get existing attendance records
+        let attendanceList =
+          JSON.parse(localStorage.getItem("attendanceRecords")) || [];
+
+        // Check if student already scanned today
+        const alreadyScanned = attendanceList.some(
+          (record) =>
+            record.idNumber === studentData.idNumber && record.date === date
+        );
+
+        if (alreadyScanned) {
+          alert("You have already recorded your attendance today!");
+          return false;
+        }
+
+        // Add new record at the beginning
+        attendanceList.unshift(attendanceRecord);
+
+        // Save to localStorage
+        localStorage.setItem(
+          "attendanceRecords",
+          JSON.stringify(attendanceList)
+        );
+
+        console.log("Attendance saved with ID:", studentId);
+        return true;
+      }
 
       // Show popup with student information
       function showStudentPopup(studentData) {
@@ -182,12 +259,10 @@
         // Update student image if available
         const popupImage = document.getElementById("popupImage");
         if (studentData.image) {
-          // Try multiple possible paths
           popupImage.src = studentData.image.startsWith("http")
             ? studentData.image
             : `../static/uploads/${studentData.image}`;
           popupImage.onerror = function () {
-            // If image fails to load, use default
             this.src =
               "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
           };
@@ -208,8 +283,8 @@
 
         // Animate progress bar
         let progress = 100;
-        const totalTime = 3000; // 3 seconds
-        const intervalTime = 30; // Update every 30ms
+        const totalTime = 3000;
+        const intervalTime = 30;
         const decrement = (100 / totalTime) * intervalTime;
 
         clearInterval(progressInterval);
@@ -251,7 +326,6 @@
           const studentData = JSON.parse(decodedText);
           console.log("Parsed Data:", studentData);
 
-          // Check multiple possible field names for ID
           const idNumber =
             studentData.idNumber ||
             studentData.idno ||
@@ -275,7 +349,6 @@
           const level = studentData.level || studentData.Level || "";
           const image = studentData.image || "";
 
-          // Check if at least ID or name exists
           if (idNumber || firstName || lastName) {
             const normalizedData = {
               idNumber: idNumber || "N/A",
@@ -286,7 +359,10 @@
               image: image,
             };
 
-            showStudentPopup(normalizedData);
+            // Save attendance and show popup only if successful
+            if (saveAttendance(normalizedData)) {
+              showStudentPopup(normalizedData);
+            }
           } else {
             alert(
               "Invalid QR code - All fields are empty!\n\n" +
@@ -294,7 +370,6 @@
             );
           }
         } catch (error) {
-          // Try parsing as plain ID number for backward compatibility
           if (decodedText && decodedText.trim() !== "") {
             alert(
               "QR code format not recognized!\n\n" +
@@ -364,7 +439,6 @@
       closePopupBtn.addEventListener("click", hideStudentPopup);
       popupOverlay.addEventListener("click", hideStudentPopup);
 
-      // Stop scanning when page is closed
       window.addEventListener("beforeunload", () => {
         if (isScanning) {
           stopScanning();

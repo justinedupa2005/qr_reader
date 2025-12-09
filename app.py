@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
 from db.dbhelper import *
@@ -37,11 +37,41 @@ def signin():
     return render_template('sign-in.html')
 
 
+@app.route("/attendance")
+def attendance():
+    """Attendance Records Page"""
+    return render_template('attendance.html')
+
+
 @app.route("/dashboard")
 def dashboard():
     """Display all students in the table"""
     students = getAll('students')
     return render_template('studentMngt.html', studentlist=students, student=None)
+
+
+@app.route('/api/get_students')
+def get_students():
+    """API endpoint to get list of students for attendance matching"""
+    try:
+        # Use your existing getAll function from dbhelper
+        students = getAll('students')
+
+        # Convert to list of dictionaries with only needed fields
+        student_list = []
+        for student in students:
+            student_list.append({
+                'idno': student['idno'],
+                'firstname': student['firstname'],
+                'lastname': student['lastname'],
+                'course': student['course'],
+                'level': student['level']
+            })
+
+        return jsonify(student_list)
+    except Exception as e:
+        print(f"Database error: {str(e)}")  # For debugging in console
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/login', methods=['POST'])
@@ -261,12 +291,6 @@ def update_student(idno):
     if not student:
         flash("Student not found.", "error")
         return redirect(url_for('dashboard'))
-
-    # Check if student with this ID already exists
-    existing_student = getRecord('students', idno=idno)
-    if existing_student:
-        flash("Student with this ID already exists.", "error")
-        return redirect(url_for('add_student_page'))
 
     student = student[0]
 
