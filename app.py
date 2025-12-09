@@ -40,7 +40,7 @@ def signin():
 @app.route("/dashboard")
 def dashboard():
     """Display all students in the table"""
-    students = getAll('student_accounts')
+    students = getAll('students')
     return render_template('studentMngt.html', studentlist=students, student=None)
 
 
@@ -59,6 +59,7 @@ def login():
 
     if not admin:
         # Account not found in database
+        flash("Account not found.", "error")
         return redirect(url_for('signin'))
 
     admin = admin[0]
@@ -81,15 +82,18 @@ def register():
 
     # Validate input
     if not email or not password or not confirm_password:
+        flash("All fields are required.", "error")
         return redirect(url_for('signup'))
 
     # Check if passwords match
     if password != confirm_password:
+        flash("Passwords do not match.", "error")
         return redirect(url_for('signup'))
 
     # Check if admin already exists
     existing_admin = getRecord('admin', email=email)
     if existing_admin:
+        flash("Email is already registered.", "error")
         return redirect(url_for('signup'))
 
     # Hash password
@@ -99,6 +103,7 @@ def register():
     addRecord('admin', email=email, password=hashed_password)
 
     # Redirect to login page
+    flash("Registration successful. Please log in.", "success")
     return redirect(url_for('signin'))
 
 
@@ -151,18 +156,16 @@ def update_admin(id):
     admin_record = admin_record[0]
 
     if request.method == 'POST':
-        username = request.form.get('username')
         email = request.form.get('email')
         password = request.form.get('password')
 
         # If password is provided, hash it; otherwise keep the old password
         if password and password.strip():
             hashed_password = generate_password_hash(password)
-            updateRecord("admin", id=id, username=username,
-                         email=email, password=hashed_password)
+            updateRecord("admin", id=id, email=email, password=hashed_password)
         else:
-            updateRecord("admin", id=id, username=username,
-                         email=email, password=admin_record['password'])
+            updateRecord("admin", id=id, email=email,
+                         password=admin_record['password'])
 
         flash("Admin updated successfully!", "success")
         return redirect(url_for('admin'))
@@ -175,13 +178,13 @@ def update_admin(id):
 @app.route('/view_student/<idno>')
 def view_student(idno):
     """View student details in the left panel"""
-    student = getRecord("student_accounts", idno=idno)
+    student = getRecord("students", idno=idno)
     if not student:
         flash("Student not found.", "error")
         return redirect(url_for('dashboard'))
 
     student = student[0]
-    students = getAll('student_accounts')
+    students = getAll('students')
     return render_template('studentMngt.html', student=student, studentlist=students)
 
 
@@ -205,7 +208,7 @@ def add_student():
         return redirect(url_for('add_student_page'))
 
     # Check if student with this ID already exists
-    existing_student = getRecord('student_accounts', idno=idno)
+    existing_student = getRecord('students', idno=idno)
     if existing_student:
         flash("Student with this ID already exists.", "error")
         return redirect(url_for('add_student_page'))
@@ -219,7 +222,7 @@ def add_student():
         image_file.save(image_path)
 
     # Add student record including image
-    addRecord("student_accounts",
+    addRecord("students",
               idno=idno,
               lastname=lastname,
               firstname=firstname,
@@ -234,7 +237,7 @@ def add_student():
 @app.route('/delete_student/<idno>')
 def delete_student(idno):
     """Delete a student from the database"""
-    student = getRecord("student_accounts", idno=idno)
+    student = getRecord("students", idno=idno)
 
     if student and student[0]['image']:
         # Delete the image file if it exists
@@ -246,7 +249,7 @@ def delete_student(idno):
             except Exception as e:
                 print(f"Error deleting image: {e}")
 
-    deleteRecord("student_accounts", idno=idno)
+    deleteRecord("students", idno=idno)
     flash("Student deleted successfully!", "success")
     return redirect(url_for('dashboard'))
 
@@ -254,10 +257,16 @@ def delete_student(idno):
 @app.route('/update_student/<idno>', methods=['GET', 'POST'])
 def update_student(idno):
     """Update student information"""
-    student = getRecord("student_accounts", idno=idno)
+    student = getRecord("students", idno=idno)
     if not student:
         flash("Student not found.", "error")
         return redirect(url_for('dashboard'))
+
+    # Check if student with this ID already exists
+    existing_student = getRecord('students', idno=idno)
+    if existing_student:
+        flash("Student with this ID already exists.", "error")
+        return redirect(url_for('add_student_page'))
 
     student = student[0]
 
@@ -290,7 +299,7 @@ def update_student(idno):
             image_filename = student['image']
 
         # Update student record
-        updateRecord("student_accounts",
+        updateRecord("students",
                      idno=idno,
                      lastname=lastname,
                      firstname=firstname,

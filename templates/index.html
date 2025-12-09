@@ -20,12 +20,89 @@
 
       <div class="flex-1 flex justify-end">
         <a
-          href="{{ url_for('signin') }}"
+          href="/sign-in"
           class="text-white text-sm sm:text-base md:text-lg hover:underline"
           >Login</a
         >
       </div>
     </header>
+
+    <!-- Student Info Popup -->
+    <div
+      id="studentPopup"
+      class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-11/12 max-w-md bg-white rounded-lg shadow-2xl border-4 border-blue-500 p-6 z-50 opacity-0 hidden"
+    >
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold text-blue-800">Student Information</h3>
+        <button
+          id="closePopup"
+          class="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+        >
+          ×
+        </button>
+      </div>
+
+      <!-- Student Photo -->
+      <div class="flex justify-center mb-4">
+        <div
+          class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden"
+        >
+          <img
+            id="popupImage"
+            src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+            alt="student"
+            class="w-full h-full object-cover"
+          />
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div class="bg-blue-50 p-3 rounded-lg">
+          <p class="text-xs text-gray-600 mb-1">ID Number</p>
+          <p class="text-lg font-bold text-gray-900" id="popupIdNumber">-</p>
+        </div>
+
+        <div class="bg-blue-50 p-3 rounded-lg">
+          <p class="text-xs text-gray-600 mb-1">Full Name</p>
+          <p class="text-lg font-bold text-gray-900" id="popupStudentName">-</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-blue-50 p-3 rounded-lg">
+            <p class="text-xs text-gray-600 mb-1">Course</p>
+            <p class="text-sm font-semibold text-gray-900" id="popupCourse">
+              -
+            </p>
+          </div>
+
+          <div class="bg-blue-50 p-3 rounded-lg">
+            <p class="text-xs text-gray-600 mb-1">Year Level</p>
+            <p class="text-sm font-semibold text-gray-900" id="popupLevel">-</p>
+          </div>
+        </div>
+
+        <div class="bg-green-50 p-3 rounded-lg border-2 border-green-500">
+          <p class="text-center text-green-700 font-bold text-lg">
+            Scan Successful
+          </p>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="mt-4 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div
+          id="progressBar"
+          class="bg-blue-600 h-2 rounded-full transition-all duration-100"
+          style="width: 100%"
+        ></div>
+      </div>
+    </div>
+
+    <!-- Overlay for popup -->
+    <div
+      id="popupOverlay"
+      class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"
+    ></div>
 
     <!-- Main Content Area -->
     <div class="content-wrapper">
@@ -56,52 +133,6 @@
             STOP SCANNING
           </button>
         </div>
-
-        <!-- Result Display -->
-        <div
-          id="result"
-          class="w-full p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-[100px] hidden"
-        >
-          <h3 class="text-sm font-semibold text-gray-700 mb-2">
-            Scanned Result:
-          </h3>
-          <div id="resultData" class="text-sm text-gray-900 break-all"></div>
-        </div>
-
-        <!-- Student Info Display -->
-        <div
-          id="studentInfo"
-          class="w-full p-4 bg-blue-50 rounded-lg border border-blue-200 hidden"
-        >
-          <h3 class="text-base font-bold text-blue-800 mb-3">
-            Student Information
-          </h3>
-          <div class="space-y-2 text-sm">
-            <p>
-              <span class="font-semibold">Unique ID:</span>
-              <span id="uniqueID"></span>
-            </p>
-            <p>
-              <span class="font-semibold">ID Number:</span>
-              <span id="idNumber"></span>
-            </p>
-            <p>
-              <span class="font-semibold">Name:</span>
-              <span id="studentName"></span>
-            </p>
-            <p>
-              <span class="font-semibold">Course:</span>
-              <span id="course"></span>
-            </p>
-            <p>
-              <span class="font-semibold">Level:</span> <span id="level"></span>
-            </p>
-            <p>
-              <span class="font-semibold">Timestamp:</span>
-              <span id="timestamp"></span>
-            </p>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -114,56 +145,168 @@
       </p>
     </footer>
 
+    <!-- Load Html5Qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
     <script>
       let html5QrCode = null;
       let isScanning = false;
+      let popupTimeout = null;
+      let progressInterval = null;
+      let scannedStudents = [];
 
       const startBtn = document.getElementById("startBtn");
       const stopBtn = document.getElementById("stopBtn");
-      const resultDiv = document.getElementById("result");
-      const resultData = document.getElementById("resultData");
-      const studentInfo = document.getElementById("studentInfo");
+      const studentPopup = document.getElementById("studentPopup");
+      const popupOverlay = document.getElementById("popupOverlay");
+      const closePopupBtn = document.getElementById("closePopup");
+      const progressBar = document.getElementById("progressBar");
 
-      // Function to parse and display student data
+      // Show popup with student information
+      function showStudentPopup(studentData) {
+        // Populate popup with data
+        document.getElementById("popupIdNumber").textContent =
+          studentData.idNumber || "N/A";
+        document.getElementById("popupStudentName").textContent =
+          `${studentData.firstName || ""} ${
+            studentData.lastName || ""
+          }`.trim() || "N/A";
+        document.getElementById("popupCourse").textContent =
+          studentData.course || "N/A";
+
+        const levelText = studentData.level
+          ? `Year ${studentData.level}`
+          : "N/A";
+        document.getElementById("popupLevel").textContent = levelText;
+
+        // Update student image if available
+        const popupImage = document.getElementById("popupImage");
+        if (studentData.image) {
+          // Try multiple possible paths
+          popupImage.src = studentData.image.startsWith("http")
+            ? studentData.image
+            : `../static/uploads/${studentData.image}`;
+          popupImage.onerror = function () {
+            // If image fails to load, use default
+            this.src =
+              "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+          };
+        } else {
+          popupImage.src =
+            "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+        }
+
+        // Show popup and overlay
+        studentPopup.classList.remove("hidden");
+        popupOverlay.classList.remove("hidden");
+
+        studentPopup.classList.remove("popup-exit");
+        studentPopup.classList.add("popup-enter");
+
+        // Reset progress bar
+        progressBar.style.width = "100%";
+
+        // Animate progress bar
+        let progress = 100;
+        const totalTime = 3000; // 3 seconds
+        const intervalTime = 30; // Update every 30ms
+        const decrement = (100 / totalTime) * intervalTime;
+
+        clearInterval(progressInterval);
+        progressInterval = setInterval(() => {
+          progress -= decrement;
+          if (progress <= 0) {
+            progress = 0;
+            clearInterval(progressInterval);
+          }
+          progressBar.style.width = progress + "%";
+        }, intervalTime);
+
+        // Auto-hide after 3 seconds
+        clearTimeout(popupTimeout);
+        popupTimeout = setTimeout(() => {
+          hideStudentPopup();
+        }, totalTime);
+      }
+
+      // Hide popup
+      function hideStudentPopup() {
+        studentPopup.classList.remove("popup-enter");
+        studentPopup.classList.add("popup-exit");
+
+        setTimeout(() => {
+          studentPopup.classList.add("hidden");
+          popupOverlay.classList.add("hidden");
+        }, 400);
+
+        clearTimeout(popupTimeout);
+        clearInterval(progressInterval);
+      }
+
+      // Parse and display student data
       function displayStudentData(decodedText) {
+        console.log("Raw QR Data:", decodedText);
+
         try {
           const studentData = JSON.parse(decodedText);
+          console.log("Parsed Data:", studentData);
 
-          // Display raw result
-          resultDiv.classList.remove("hidden");
-          resultData.textContent = decodedText;
+          // Check multiple possible field names for ID
+          const idNumber =
+            studentData.idNumber ||
+            studentData.idno ||
+            studentData.IDNO ||
+            studentData.id ||
+            "";
 
-          // Display parsed student info
-          if (studentData.uniqueID && studentData.idNumber) {
-            studentInfo.classList.remove("hidden");
-            document.getElementById("uniqueID").textContent =
-              studentData.uniqueID || "N/A";
-            document.getElementById("idNumber").textContent =
-              studentData.idNumber || "N/A";
-            document.getElementById("studentName").textContent =
-              `${studentData.firstName || ""} ${
-                studentData.lastName || ""
-              }`.trim() || "N/A";
-            document.getElementById("course").textContent =
-              studentData.course || "N/A";
-            document.getElementById("level").textContent =
-              studentData.level || "N/A";
+          const firstName =
+            studentData.firstName ||
+            studentData.firstname ||
+            studentData.FirstName ||
+            "";
 
-            if (studentData.timestamp) {
-              const date = new Date(studentData.timestamp);
-              document.getElementById("timestamp").textContent =
-                date.toLocaleString();
-            } else {
-              document.getElementById("timestamp").textContent = "N/A";
-            }
+          const lastName =
+            studentData.lastName ||
+            studentData.lastname ||
+            studentData.LastName ||
+            "";
+
+          const course = studentData.course || studentData.Course || "";
+          const level = studentData.level || studentData.Level || "";
+          const image = studentData.image || "";
+
+          // Check if at least ID or name exists
+          if (idNumber || firstName || lastName) {
+            const normalizedData = {
+              idNumber: idNumber || "N/A",
+              firstName: firstName,
+              lastName: lastName,
+              course: course || "N/A",
+              level: level || "N/A",
+              image: image,
+            };
+
+            showStudentPopup(normalizedData);
           } else {
-            studentInfo.classList.add("hidden");
+            alert(
+              "Invalid QR code - All fields are empty!\n\n" +
+                "Please ensure your QR code contains valid student data."
+            );
           }
         } catch (error) {
-          // Not JSON, just display raw text
-          resultDiv.classList.remove("hidden");
-          resultData.textContent = decodedText;
-          studentInfo.classList.add("hidden");
+          // Try parsing as plain ID number for backward compatibility
+          if (decodedText && decodedText.trim() !== "") {
+            alert(
+              "QR code format not recognized!\n\n" +
+                "This appears to be an old format QR code.\n" +
+                "Please regenerate the QR code from the student edit page.\n\n" +
+                "ID detected: " +
+                decodedText
+            );
+          } else {
+            alert("Unable to read QR code data!");
+          }
+          console.error("QR Parse Error:", error);
         }
       }
 
@@ -171,15 +314,7 @@
       function onScanSuccess(decodedText, decodedResult) {
         console.log(`QR Code detected: ${decodedText}`);
         displayStudentData(decodedText);
-
-        // Optional: Stop scanning after successful read
-        // stopScanning();
-      }
-
-      // Error callback (optional)
-      function onScanError(errorMessage) {
-        // Handle scan errors silently
-        // console.warn(`QR Code scan error: ${errorMessage}`);
+        stopScanning();
       }
 
       // Start scanning
@@ -188,13 +323,12 @@
           html5QrCode = new Html5Qrcode("reader");
 
           await html5QrCode.start(
-            { facingMode: "environment" }, // Use back camera
+            { facingMode: "environment" },
             {
               fps: 10,
               qrbox: { width: 250, height: 250 },
             },
-            onScanSuccess,
-            onScanError
+            onScanSuccess
           );
 
           isScanning = true;
@@ -224,9 +358,11 @@
         }
       }
 
-      // Button event listeners
+      // Event listeners
       startBtn.addEventListener("click", startScanning);
       stopBtn.addEventListener("click", stopScanning);
+      closePopupBtn.addEventListener("click", hideStudentPopup);
+      popupOverlay.addEventListener("click", hideStudentPopup);
 
       // Stop scanning when page is closed
       window.addEventListener("beforeunload", () => {

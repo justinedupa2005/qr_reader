@@ -7,6 +7,25 @@
     <link rel="stylesheet" href="../static/css/student.css" />
   </head>
 <body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+    <div class="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+      {% for category, message in messages %}
+      <div
+        class="px-6 py-3 rounded-md shadow-lg text-sm sm:text-base mb-2 text-white
+      {{ 'bg-green-600' if category == 'success' else 'bg-red-600' }}"
+      >
+        {{ message }}
+      </div>
+      {% endfor %}
+    </div>
+    <script>
+      setTimeout(() => {
+        const flash = document.querySelector(".fixed");
+        if (flash) flash.style.display = "none";
+      }, 3000);
+    </script>
+    {% endif %} {% endwith %}
     <!-- Header -->
     <header
       class="w-full h-[10vh] min-h-[60px] flex items-center bg-blue-600 px-4 sm:px-6 md:px-8 fixed top-0 left-0 z-50 shadow-md"
@@ -71,15 +90,17 @@
           <label for="imageUpload" class="cursor-pointer">
               {% if student and student['image'] %}
               <img
+                id="previewImage"
                 src="{{ url_for('static', filename='uploads/' + student['image']) }}"
                 alt="student-photo"
                 class="w-32 h-32 rounded-full object-cover border-4 border-gray-300"
               />
               {% else %}
               <img
+                id="previewImage"
                 src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
                 alt="user-icon"
-                class="w-16 h-16"
+                class="w-32 h-32 rounded-full object-cover border-4 border-gray-300"
               />
               {% endif %}
           </label>
@@ -88,14 +109,15 @@
 
         <p class="text-xs text-gray-500 -mt-1">Click image to upload photo</p>
 
-        <!-- ID Number (readonly) -->
+        <!-- ID Number -->
         <input
           type="text"
           id="idNumber"
           name="idno"
           value="{{ student.idno if student else '' }}"
           placeholder="ID Number"
-          class="border border-gray-300 p-1.5 sm:p-2 rounded-md w-full text-sm bg-gray-100 cursor-not-allowed"
+          class="border border-gray-300 p-1.5 sm:p-2 rounded-md w-full text-sm {% if is_edit %}cursor-not-allowed{% endif %}"
+          required
           {% if is_edit %}readonly{% endif %}
         />
 
@@ -202,6 +224,7 @@
     <script>
       let stream = null;
       let isCameraActive = false;
+      let qrCodeInstance = null;
 
       const webcam = document.getElementById("webcam");
       const webcamPlaceholder = document.getElementById("webcam-placeholder");
@@ -210,31 +233,65 @@
       const previewImage = document.getElementById("previewImage");
       const downloadBtn = document.getElementById("downloadQR");
 
-      // Generate QR Code with student data
-      var studentInfo = {
-        idNumber: "{{ student.idno }}",
-        firstName: "{{ student.firstname }}",
-        lastName: "{{ student.lastname }}",
-        course: "{{ student.course }}",
-        level: "{{ student.level }}"
-      };
-      
-      var qrData = JSON.stringify(studentInfo);
-      new QRCode(document.getElementById("qrcode"), {
-        text: qrData,
-        width: 200,
-        height: 200,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H,
+      // Function to generate QR Code
+      function generateQRCode() {
+        // Get current form values
+        const idNumber = document.getElementById('idNumber').value.trim();
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+        const course = document.getElementById('course').value.trim();
+        const level = document.getElementById('level').value.trim();
+
+        console.log("Generating QR with data:", {idNumber, firstName, lastName, course, level});
+
+        // Create student info object
+        const studentInfo = {
+          idNumber: idNumber,
+          firstName: firstName,
+          lastName: lastName,
+          course: course,
+          level: level
+        };
+
+        // Convert to JSON string
+        const qrCodeData = JSON.stringify(studentInfo);
+        console.log("QR Code JSON:", qrCodeData);
+
+        // Clear existing QR code
+        const qrcodeDiv = document.getElementById('qrcode');
+        qrcodeDiv.innerHTML = '';
+
+        // Generate new QR code
+        qrCodeInstance = new QRCode(qrcodeDiv, {
+          text: qrCodeData,
+          width: 200,
+          height: 200,
+          colorDark: "#000000",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H,
+        });
+      }
+
+      // Generate initial QR code on page load
+      window.addEventListener('DOMContentLoaded', function() {
+        // Wait a bit for the page to fully load
+        setTimeout(generateQRCode, 100);
       });
+
+      // Update QR code when form fields change
+      document.getElementById('idNumber').addEventListener('input', generateQRCode);
+      document.getElementById('firstName').addEventListener('input', generateQRCode);
+      document.getElementById('lastName').addEventListener('input', generateQRCode);
+      document.getElementById('course').addEventListener('change', generateQRCode);
+      document.getElementById('level').addEventListener('change', generateQRCode);
 
       // Download QR Code
       downloadBtn.addEventListener("click", function () {
-        var canvas = document.querySelector("#qrcode canvas");
+        const canvas = document.querySelector("#qrcode canvas");
         if (canvas) {
-          var link = document.createElement("a");
-          link.download = "qrcode-{{ student.idno }}-" + Date.now() + ".png";
+          const link = document.createElement("a");
+          const idNumber = document.getElementById('idNumber').value || 'student';
+          link.download = "qrcode-" + idNumber + "-" + Date.now() + ".png";
           link.href = canvas.toDataURL();
           link.click();
         } else {
@@ -264,15 +321,15 @@
             alert("Unable to access camera: " + err.message);
           }
         } else {
-          var canvas = document.createElement("canvas");
+          const canvas = document.createElement("canvas");
           canvas.width = webcam.videoWidth;
           canvas.height = webcam.videoHeight;
           canvas.getContext("2d").drawImage(webcam, 0, 0);
           previewImage.src = canvas.toDataURL("image/png");
           
           canvas.toBlob(function(blob) {
-            var file = new File([blob], "webcam-capture.png", { type: "image/png" });
-            var dataTransfer = new DataTransfer();
+            const file = new File([blob], "webcam-capture.png", { type: "image/png" });
+            const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
             document.getElementById("imageUpload").files = dataTransfer.files;
           });
@@ -301,9 +358,9 @@
       }
 
       document.getElementById("imageUpload").addEventListener("change", function (e) {
-        var file = e.target.files[0];
+        const file = e.target.files[0];
         if (file) {
-          var reader = new FileReader();
+          const reader = new FileReader();
           reader.onload = function (event) {
             previewImage.src = event.target.result;
           };

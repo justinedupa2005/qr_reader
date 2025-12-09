@@ -4,30 +4,63 @@ body {
   height: 100%;
   padding: 0;
   margin: 0;
-  overflow: hidden;
 }
 
-/* Main content container */
 .content-wrapper {
   position: fixed;
   top: 10vh;
   left: 0;
   right: 0;
   bottom: 10vh;
+  overflow-y: auto;
+  background-color: #f3f4f6;
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 1rem;
-  overflow: hidden;
+  align-items: flex-start;
+  padding: 2rem 1rem;
 }
 
-/* QR Reader styling */
+/* Popup Animation */
+@keyframes slideIn {
+  from {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.popup-enter {
+  animation: slideIn 0.4s ease-out forwards;
+}
+
+.popup-exit {
+  animation: slideOut 0.4s ease-in forwards;
+}
+
+/* QR Reader Styling */
 #reader {
-  width: 100%;
-  max-width: 500px;
+  border: 2px solid #e5e7eb;
   border-radius: 0.5rem;
 }
 
-#reader video {
-  border-radius: 0.5rem;
+#reader__dashboard_section_csr button {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  border-radius: 0.375rem !important;
+  padding: 0.5rem 1rem !important;
+  font-weight: 500 !important;
 }

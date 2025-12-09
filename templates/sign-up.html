@@ -1,4 +1,22 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %} {% block content %} {% with messages =
+get_flashed_messages(with_categories=true) %} {% if messages %}
+<div class="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+  {% for category, message in messages %}
+  <div
+    class="px-6 py-3 rounded-md shadow-lg text-sm sm:text-base mb-2 text-white
+  {{ 'bg-green-600' if category == 'success' else 'bg-red-600' }}"
+  >
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+<script>
+  setTimeout(() => {
+    const flash = document.querySelector(".fixed");
+    if (flash) flash.style.display = "none";
+  }, 3000);
+</script>
+{% endif %} {% endwith %}
 
 <!-- Main container -->
 <div class="w-full min-h-screen flex flex-col">

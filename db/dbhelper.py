@@ -1,5 +1,5 @@
 from sqlite3 import connect, Row
-database = 'db/campus_data.db'
+database = 'school.db'
 
 
 def getProcess(sql, vals) -> list:
