@@ -171,13 +171,14 @@
         });
         const date = now.toLocaleDateString("en-US");
 
-        // Fetch student list from backend to get the student's ID
+        // Fetch student list from backend to get the student's ID and image
         let studentId = null;
+        let studentImage = null;
         try {
           const response = await fetch("/api/get_students");
           if (response.ok) {
             const students = await response.json();
-            // Find the student by their ID number and get their position in the list
+            // Find the student by their ID number
             const studentIndex = students.findIndex(
               (s) =>
                 s.idno === studentData.idNumber ||
@@ -185,6 +186,10 @@
             );
             if (studentIndex !== -1) {
               studentId = studentIndex + 1; // ID is the position (1-based index)
+              studentImage = students[studentIndex].image; // Get the image filename from database
+
+              // Update studentData with the image from database
+              studentData.image = studentImage;
             }
           }
         } catch (error) {
@@ -236,6 +241,7 @@
         );
 
         console.log("Attendance saved with ID:", studentId);
+        console.log("Image:", studentImage);
         return true;
       }
 
@@ -256,12 +262,15 @@
           : "N/A";
         document.getElementById("popupLevel").textContent = levelText;
 
-        // Update student image if available
+        // Update student image
         const popupImage = document.getElementById("popupImage");
         if (studentData.image) {
-          popupImage.src = studentData.image.startsWith("http")
-            ? studentData.image
-            : `../static/uploads/${studentData.image}`;
+          if (studentData.image) {
+            popupImage.src = studentData.image;
+          } else {
+            popupImage.src =
+              "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+          }
           popupImage.onerror = function () {
             this.src =
               "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
@@ -271,8 +280,8 @@
             "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
         }
 
-        // Show popup and overlay
-        studentPopup.classList.remove("hidden");
+        // Show popup and overlay - REMOVE OPACITY-0 HERE
+        studentPopup.classList.remove("hidden", "opacity-0"); // ← ADD THIS
         popupOverlay.classList.remove("hidden");
 
         studentPopup.classList.remove("popup-exit");
@@ -319,7 +328,7 @@
       }
 
       // Parse and display student data
-      function displayStudentData(decodedText) {
+      async function displayStudentData(decodedText) {
         console.log("Raw QR Data:", decodedText);
 
         try {
@@ -360,7 +369,8 @@
             };
 
             // Save attendance and show popup only if successful
-            if (saveAttendance(normalizedData)) {
+            const saved = await saveAttendance(normalizedData);
+            if (saved) {
               showStudentPopup(normalizedData);
             }
           } else {

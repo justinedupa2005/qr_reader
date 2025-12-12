@@ -52,25 +52,26 @@ def dashboard():
 
 @app.route('/api/get_students')
 def get_students():
-    """API endpoint to get list of students for attendance matching"""
     try:
-        # Use your existing getAll function from dbhelper
         students = getAll('students')
-
-        # Convert to list of dictionaries with only needed fields
         student_list = []
+
         for student in students:
+            image_path = None
+            if student['image']:
+                image_path = f"/static/uploads/{student['image']}"
+
             student_list.append({
                 'idno': student['idno'],
                 'firstname': student['firstname'],
                 'lastname': student['lastname'],
                 'course': student['course'],
-                'level': student['level']
+                'level': student['level'],
+                'image': image_path
             })
 
         return jsonify(student_list)
     except Exception as e:
-        print(f"Database error: {str(e)}")  # For debugging in console
         return jsonify({'error': str(e)}), 500
 
 
